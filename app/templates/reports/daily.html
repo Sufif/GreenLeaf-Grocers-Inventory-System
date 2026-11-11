@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Daily Sales Report{% endblock %}
+{% block content %}
+<h4 class="mb-3">Daily Sales — {{ report_date }}</h4>
+<form class="mb-3" method="GET">
+    <input type="date" name="date" value="{{ report_date }}" class="form-control form-control-sm d-inline-block w-auto">
+    <button type="submit" class="btn btn-sm btn-green">Go</button>
+</form>
+<div class="card">
+    <div class="card-body">
+        <p class="fs-5">Total Revenue: <strong class="text-success">₹{{ '%.2f'|format(total) }}</strong> &nbsp;|&nbsp; Bills: {{ sales|length }}</p>
+    </div>
+    <table class="table mb-0">
+        <thead><tr><th>#</th><th>Time</th><th>Cashier</th><th>Discount</th><th>Total</th><th></th></tr></thead>
+        <tbody>
+        {% for s in sales %}
+        <tr>
+            <td>{{ s.sale_id }}</td>
+            <td>{{ s.sale_time.strftime('%H:%M') if s.sale_time else '' }}</td>
+            <td>{{ s.cashier.username if s.cashier else '' }}</td>
+            <td>₹{{ '%.2f'|format(s.discount or 0) }}</td>
+            <td>₹{{ '%.2f'|format(s.total_amount) }}</td>
+            <td><a href="{{ url_for('billing.receipt', sale_id=s.sale_id) }}">View</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-center text-muted">No sales on this day.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

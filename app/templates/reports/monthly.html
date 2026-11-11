@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Monthly Revenue Report{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h4 class="mb-0"><i class="bi bi-calendar3"></i> Monthly Revenue Report</h4>
+    <form class="d-flex gap-2" method="GET">
+        <input type="date" name="start" class="form-control form-control-sm" value="{{ start }}">
+        <input type="date" name="end" class="form-control form-control-sm" value="{{ end }}">
+        <button type="submit" class="btn btn-sm btn-green">Apply</button>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-header bg-white d-flex justify-content-between">
+        <span class="fw-semibold">Revenue by Month</span>
+        <a href="{{ url_for('reports.export_report', report_type='monthly', start=start, end=end) }}" class="btn btn-sm btn-outline-secondary">Export CSV</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Month</th>
+                    <th class="text-end">Revenue (₹)</th>
+                    <th class="text-end">Units Sold</th>
+                    <th class="text-end">Bills</th>
+                    <th class="text-end">Avg Bill (₹)</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for row in monthly_rows %}
+            <tr>
+                <td>{{ row.month }}</td>
+                <td class="text-end">{{ '%.2f'|format(row.revenue) }}</td>
+                <td class="text-end">{{ row.qty }}</td>
+                <td class="text-end">{{ row.bills }}</td>
+                <td class="text-end">{{ '%.2f'|format(row.avg_bill) }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="text-center text-muted">No data for selected range.</td></tr>
+            {% endfor %}
+            </tbody>
+            {% if monthly_rows %}
+            <tfoot>
+                <tr class="fw-bold">
+                    <td>Total</td>
+                    <td class="text-end">{{ '%.2f'|format(monthly_rows|sum(attribute='revenue')) }}</td>
+                    <td class="text-end">{{ monthly_rows|sum(attribute='qty') }}</td>
+                    <td class="text-end">{{ monthly_rows|sum(attribute='bills') }}</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+</div>
+<a href="{{ url_for('reports.index') }}" class="btn btn-outline-secondary btn-sm mt-3">← Back to Analytics</a>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - GreenLeaf Grocers{% endblock %}
+{% block content %}
+<h4 class="mb-3">{{ title }}</h4>
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Name *</label>
+                    <input type="text" name="name" class="form-control" required value="{{ product.name if product else '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Category</label>
+                    <input type="text" name="category" class="form-control" value="{{ product.category if product else '' }}" list="cats">
+                    <datalist id="cats">
+                        <option value="Fruits"><option value="Vegetables"><option value="Dairy">
+                        <option value="Bakery"><option value="Beverages"><option value="Snacks">
+                        <option value="Grains"><option value="Spices"><option value="Personal Care">
+                        <option value="Household"><option value="Frozen"><option value="Meat & Seafood">
+                    </datalist>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Unit Price (₹) *</label>
+                    <input type="number" step="0.01" min="0" name="unit_price" class="form-control" required value="{{ product.unit_price if product else '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Stock Qty *</label>
+                    <input type="number" min="0" name="stock_qty" class="form-control" required value="{{ product.stock_qty if product else 0 }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Reorder Level</label>
+                    <input type="number" min="0" name="reorder_level" class="form-control" value="{{ product.reorder_level if product else 10 }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Unit</label>
+                    <select name="unit" class="form-select">
+                        {% set u = product.unit if product else 'pcs' %}
+                        <option value="pcs" {% if u=='pcs' %}selected{% endif %}>pcs</option>
+                        <option value="kg" {% if u=='kg' %}selected{% endif %}>kg</option>
+                        <option value="litre" {% if u=='litre' %}selected{% endif %}>litre</option>
+                        <option value="pack" {% if u=='pack' %}selected{% endif %}>pack</option>
+                        <option value="bunch" {% if u=='bunch' %}selected{% endif %}>bunch</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Expiry Date</label>
+                    <input type="date" name="expiry_date" class="form-control" value="{{ product.expiry_date.isoformat() if product and product.expiry_date else '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Supplier</label>
+                    <select name="supplier_id" class="form-select">
+                        <option value="">-- None --</option>
+                        {% for s in suppliers %}
+                        <option value="{{ s.supplier_id }}" {% if product and product.supplier_id == s.supplier_id %}selected{% endif %}>{{ s.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Barcode</label>
+                    <input type="text" name="barcode" class="form-control" value="{{ product.barcode if product else '' }}">
+                </div>
+            </div>
+            <div class="mt-4">
+                <button type="submit" class="btn btn-green">Save Product</button>
+                <a href="{{ url_for('products.list_products') }}" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

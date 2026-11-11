@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Receipt #{{ sale.sale_id }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card" id="receipt">
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <h4><i class="bi bi-leaf text-success"></i> GreenLeaf Grocers</h4>
+                    <p class="mb-0 small text-muted">Inventory & Sales System</p>
+                    <hr>
+                    <strong>Bill #{{ sale.sale_id }}</strong><br>
+                    {{ sale.sale_date }} {{ sale.sale_time.strftime('%H:%M') if sale.sale_time else '' }}<br>
+                    Cashier: {{ sale.cashier.username if sale.cashier else '' }}
+                </div>
+                <table class="table table-sm">
+                    <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+                    <tbody>
+                    {% for item in sale.items %}
+                    <tr>
+                        <td>{{ item.product.name if item.product else 'Product' }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>₹{{ '%.2f'|format(item.price) }}</td>
+                        <td>₹{{ '%.2f'|format(item.line_total) }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                <div class="text-end">
+                    {% if sale.discount %}
+                    <div>Discount: -₹{{ '%.2f'|format(sale.discount) }}</div>
+                    {% endif %}
+                    <div class="fs-5 fw-bold">Total: ₹{{ '%.2f'|format(sale.total_amount) }}</div>
+                    <div class="small text-muted">Paid via {{ sale.payment_method }}</div>
+                </div>
+                <hr>
+                <p class="text-center small text-muted mb-0">Thank you for shopping with us!</p>
+            </div>
+        </div>
+        <div class="text-center mt-3">
+            <button onclick="window.print()" class="btn btn-outline-primary"><i class="bi bi-printer"></i> Print</button>
+            <a href="{{ url_for('billing.receipt_pdf', sale_id=sale.sale_id) }}" class="btn btn-outline-success"><i class="bi bi-file-pdf"></i> Download PDF</a>
+            <a href="{{ url_for('billing.index') }}" class="btn btn-green">New Bill</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

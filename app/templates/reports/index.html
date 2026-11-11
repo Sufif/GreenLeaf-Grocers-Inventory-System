@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block title %}Reports & Analytics{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h4 class="mb-0"><i class="bi bi-bar-chart"></i> Reports & Analytics</h4>
+    <form class="d-flex gap-2" method="GET">
+        <input type="date" name="start" class="form-control form-control-sm" value="{{ start }}">
+        <input type="date" name="end" class="form-control form-control-sm" value="{{ end }}">
+        <button type="submit" class="btn btn-sm btn-green">Apply</button>
+    </form>
+</div>
+
+<!-- KPIs (all 5 required) -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="card stat-card text-center p-3 h-100">
+            <div class="text-muted small">Total Revenue</div>
+            <div class="fs-5 fw-bold text-success">₹{{ '%.0f'|format(total_revenue) }}</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="card stat-card text-center p-3 h-100">
+            <div class="text-muted small">Avg Bill Value</div>
+            <div class="fs-5 fw-bold">₹{{ '%.0f'|format(avg_bill) }}</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="card stat-card text-center p-3 h-100">
+            <div class="text-muted small">Bills</div>
+            <div class="fs-5 fw-bold">{{ bill_count }}</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="card stat-card text-center p-3 h-100">
+            <div class="text-muted small">Stock Turnover</div>
+            <div class="fs-5 fw-bold text-primary">{{ stock_turnover }}</div>
+            <div class="text-muted" style="font-size:0.7rem">COGS / Inv. Value</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="card stat-card text-center p-3 h-100">
+            <div class="text-muted small">Low-Stock Items</div>
+            <div class="fs-5 fw-bold text-danger">{{ low_stock_count }}</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="card stat-card text-center p-3 h-100">
+            <div class="text-muted small">Top Category</div>
+            <div class="fs-6 fw-bold">{{ top_category }}</div>
+            <div class="text-muted" style="font-size:0.7rem">{{ '%.1f'|format(top_category_share) }}% share</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-white fw-semibold d-flex justify-content-between">
+                <span>Daily Revenue Trend</span>
+                <a href="{{ url_for('reports.monthly_report', start=start, end=end) }}" class="btn btn-sm btn-outline-secondary">Monthly View</a>
+            </div>
+            <div class="card-body">
+                <canvas id="dailyChart" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header bg-white fw-semibold">Category Share</div>
+            <div class="card-body">
+                <canvas id="catChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header bg-white fw-semibold">Monthly Revenue</div>
+            <div class="card-body">
+                <canvas id="monthlyChart" height="160"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header bg-white fw-semibold">Top 10 Products (by qty sold)</div>
+            <div class="card-body">
+                <canvas id="topChart" height="160"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header bg-white fw-semibold">Slow-Moving Products (no sales in 30 days)</div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>Product</th><th>Category</th><th>Stock</th></tr></thead>
+                    <tbody>
+                    {% for p in slow_moving %}
+                    <tr><td>{{ p.name }}</td><td>{{ p.category }}</td><td>{{ p.stock_qty }}</td></tr>
+                    {% else %}
+                    <tr><td colspan="3" class="text-muted text-center">None</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">Low Stock Report</span>
+                <a href="{{ url_for('reports.export_report', report_type='low_stock') }}" class="btn btn-sm btn-outline-secondary">CSV</a>
+            </div>
+            <div class="card-body p-0" style="max-height:280px; overflow-y:auto;">
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>Product</th><th>Stock</th><th>Reorder</th></tr></thead>
+                    <tbody>
+                    {% for p in low_stock_items %}
+                    <tr><td>{{ p.name }}</td><td class="text-danger">{{ p.stock_qty }}</td><td>{{ p.reorder_level }}</td></tr>
+                    {% else %}
+                    <tr><td colspan="3" class="text-muted text-center">All good</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">Near Expiry (≤15 days)</span>
+                <a href="{{ url_for('reports.export_report', report_type='expiry') }}" class="btn btn-sm btn-outline-secondary">CSV</a>
+            </div>
+            <div class="card-body p-0" style="max-height:220px; overflow-y:auto;">
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>Product</th><th>Expiry</th><th>Stock</th></tr></thead>
+                    <tbody>
+                    {% for p in near_expiry %}
+                    <tr><td>{{ p.name }}</td><td>{{ p.expiry_date }}</td><td>{{ p.stock_qty }}</td></tr>
+                    {% else %}
+                    <tr><td colspan="3" class="text-muted text-center">None</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-3 d-flex flex-wrap gap-2">
+    <a href="{{ url_for('reports.export_report', report_type='sales', start=start, end=end) }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-download"></i> Sales CSV</a>
+    <a href="{{ url_for('reports.export_report', report_type='monthly', start=start, end=end) }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-download"></i> Monthly CSV</a>
+    <a href="{{ url_for('reports.daily_report') }}" class="btn btn-outline-secondary btn-sm">Daily Report</a>
+    <a href="{{ url_for('reports.monthly_report') }}" class="btn btn-outline-secondary btn-sm">Monthly Report</a>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const dailyData = {{ daily_revenue | tojson }};
+const monthlyData = {{ monthly_revenue | tojson }};
+const catData = {{ category_share | tojson }};
+const topData = {{ top_products | tojson }};
+
+new Chart(document.getElementById('dailyChart'), {
+    type: 'line',
+    data: {
+        labels: Object.keys(dailyData),
+        datasets: [{
+            label: 'Revenue (₹)',
+            data: Object.values(dailyData),
+            borderColor: '#2d6a4f',
+            backgroundColor: 'rgba(45,106,79,0.1)',
+            fill: true,
+            tension: 0.3
+        }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } } }
+});
+
+new Chart(document.getElementById('monthlyChart'), {
+    type: 'bar',
+    data: {
+        labels: Object.keys(monthlyData),
+        datasets: [{
+            label: 'Monthly Revenue (₹)',
+            data: Object.values(monthlyData),
+            backgroundColor: '#40916c'
+        }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } } }
+});
+
+new Chart(document.getElementById('catChart'), {
+    type: 'doughnut',
+    data: {
+        labels: Object.keys(catData),
+        datasets: [{
+            data: Object.values(catData),
+            backgroundColor: ['#2d6a4f','#40916c','#52b788','#74c69d','#95d5b2','#b7e4c7','#d8f3dc','#1b4332','#081c15','#a3b18a']
+        }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } } }
+});
+
+new Chart(document.getElementById('topChart'), {
+    type: 'bar',
+    data: {
+        labels: topData.map(d => d.name.length > 15 ? d.name.slice(0,15)+'…' : d.name),
+        datasets: [{
+            label: 'Qty Sold',
+            data: topData.map(d => d.qty),
+            backgroundColor: '#40916c'
+        }]
+    },
+    options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } } }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% block title %}Billing - GreenLeaf Grocers{% endblock %}
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-receipt"></i> New Bill</h4>
+
+<div class="row">
+    <div class="col-lg-7">
+        <div class="card mb-3">
+            <div class="card-header bg-white">
+                <input type="text" id="productSearch" class="form-control" placeholder="Search product by name or barcode..." autocomplete="off">
+                <div id="searchResults" class="list-group position-absolute w-100 shadow" style="z-index:1000; display:none; max-height:250px; overflow-y:auto;"></div>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0" id="billTable">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th style="width:100px">Price</th>
+                            <th style="width:100px">Qty</th>
+                            <th style="width:100px">Total</th>
+                            <th style="width:50px"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="billItems"></tbody>
+                </table>
+                <p id="emptyMsg" class="text-muted text-center py-4 mb-0">Search and add products to the bill.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Subtotal</span>
+                    <strong id="subtotal">₹0.00</strong>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Discount (₹)</label>
+                    <input type="number" id="discount" class="form-control" value="0" min="0" step="0.01">
+                </div>
+                <div class="d-flex justify-content-between mb-3 fs-5">
+                    <span>Total</span>
+                    <strong class="text-success" id="grandTotal">₹0.00</strong>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Payment Method</label>
+                    <select id="paymentMethod" class="form-select">
+                        <option value="cash">Cash</option>
+                        <option value="upi">UPI</option>
+                        <option value="card">Card</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Notes</label>
+                    <input type="text" id="notes" class="form-control" placeholder="Optional">
+                </div>
+                <button id="checkoutBtn" class="btn btn-green w-100 btn-lg" disabled>
+                    <i class="bi bi-check2-circle"></i> Complete Sale
+                </button>
+                <div id="billMsg" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let billItems = [];  // {id, name, price, qty, stock}
+
+const searchInput = document.getElementById('productSearch');
+const resultsDiv = document.getElementById('searchResults');
+const billBody = document.getElementById('billItems');
+const emptyMsg = document.getElementById('emptyMsg');
+const checkoutBtn = document.getElementById('checkoutBtn');
+
+let searchTimeout;
+searchInput.addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    const q = this.value.trim();
+    if (q.length < 1) {
+        resultsDiv.style.display = 'none';
+        return;
+    }
+    searchTimeout = setTimeout(() => {
+        fetch(`{{ url_for('billing.search_products') }}?q=${encodeURIComponent(q)}`)
+            .then(r => r.json())
+            .then(data => {
+                resultsDiv.innerHTML = '';
+                if (data.length === 0) {
+                    resultsDiv.innerHTML = '<div class="list-group-item text-muted">No products found</div>';
+                } else {
+                    data.forEach(p => {
+                        const a = document.createElement('a');
+                        a.href = '#';
+                        a.className = 'list-group-item list-group-item-action';
+                        a.innerHTML = `<strong>${p.name}</strong> — ₹${p.price.toFixed(2)} <span class="text-muted small">(stock: ${p.stock})</span>`;
+                        a.onclick = (e) => { e.preventDefault(); addItem(p); resultsDiv.style.display = 'none'; searchInput.value = ''; };
+                        resultsDiv.appendChild(a);
+                    });
+                }
+                resultsDiv.style.display = 'block';
+            });
+    }, 200);
+});
+
+document.addEventListener('click', (e) => {
+    if (!searchInput.contains(e.target) && !resultsDiv.contains(e.target)) {
+        resultsDiv.style.display = 'none';
+    }
+});
+
+function addItem(p) {
+    const existing = billItems.find(i => i.id === p.id);
+    if (existing) {
+        if (existing.qty + 1 > p.stock) {
+            alert(`Only ${p.stock} in stock`);
+            return;
+        }
+        existing.qty += 1;
+    } else {
+        billItems.push({ id: p.id, name: p.name, price: p.price, qty: 1, stock: p.stock });
+    }
+    renderBill();
+}
+
+function removeItem(id) {
+    billItems = billItems.filter(i => i.id !== id);
+    renderBill();
+}
+
+function updateQty(id, qty) {
+    const item = billItems.find(i => i.id === id);
+    if (!item) return;
+    qty = parseInt(qty) || 1;
+    if (qty < 1) qty = 1;
+    if (qty > item.stock) {
+        alert(`Only ${item.stock} available`);
+        qty = item.stock;
+    }
+    item.qty = qty;
+    renderBill();
+}
+
+function renderBill() {
+    billBody.innerHTML = '';
+    if (billItems.length === 0) {
+        emptyMsg.style.display = 'block';
+        checkoutBtn.disabled = true;
+    } else {
+        emptyMsg.style.display = 'none';
+        checkoutBtn.disabled = false;
+        billItems.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${item.name}</td>
+                <td>₹${item.price.toFixed(2)}</td>
+                <td><input type="number" class="form-control form-control-sm" value="${item.qty}" min="1" max="${item.stock}" style="width:70px" onchange="updateQty(${item.id}, this.value)"></td>
+                <td>₹${(item.price * item.qty).toFixed(2)}</td>
+                <td><button class="btn btn-sm btn-outline-danger" onclick="removeItem(${item.id})">&times;</button></td>
+            `;
+            billBody.appendChild(tr);
+        });
+    }
+    updateTotals();
+}
+
+function updateTotals() {
+    const sub = billItems.reduce((s, i) => s + i.price * i.qty, 0);
+    const disc = parseFloat(document.getElementById('discount').value) || 0;
+    const total = Math.max(0, sub - disc);
+    document.getElementById('subtotal').textContent = '₹' + sub.toFixed(2);
+    document.getElementById('grandTotal').textContent = '₹' + total.toFixed(2);
+}
+
+document.getElementById('discount').addEventListener('input', updateTotals);
+
+checkoutBtn.addEventListener('click', function() {
+    if (billItems.length === 0) return;
+    this.disabled = true;
+    const payload = {
+        items: billItems.map(i => ({ product_id: i.id, quantity: i.qty })),
+        discount: parseFloat(document.getElementById('discount').value) || 0,
+        payment_method: document.getElementById('paymentMethod').value,
+        notes: document.getElementById('notes').value
+    };
+    fetch('{{ url_for("billing.create_sale") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(data => {
+        const msg = document.getElementById('billMsg');
+        if (data.success) {
+            msg.innerHTML = `<div class="alert alert-success">${data.message} <a href="/billing/receipt/${data.sale_id}" class="alert-link">View Receipt</a></div>`;
+            billItems = [];
+            renderBill();
+            document.getElementById('discount').value = 0;
+            document.getElementById('notes').value = '';
+        } else {
+            msg.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+            this.disabled = false;
+        }
+    })
+    .catch(err => {
+        document.getElementById('billMsg').innerHTML = `<div class="alert alert-danger">Error: ${err}</div>`;
+        this.disabled = false;
+    });
+});
+</script>
+{% endblock %}

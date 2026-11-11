@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Import Products - GreenLeaf Grocers{% endblock %}
+{% block content %}
+<h4 class="mb-3">Import Products from CSV</h4>
+<div class="card">
+    <div class="card-body">
+        <p>CSV columns expected: <code>name, category, unit_price, stock_qty, reorder_level, expiry_date, unit, barcode</code></p>
+        <p class="text-muted small">Only <code>name</code> is required. Dates in YYYY-MM-DD format.</p>
+        <form method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+                <input type="file" name="file" accept=".csv" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-green">Upload & Import</button>
+            <a href="{{ url_for('products.list_products') }}" class="btn btn-outline-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}
