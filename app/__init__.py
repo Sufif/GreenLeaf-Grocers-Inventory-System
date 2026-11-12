@@ -34,12 +34,15 @@ def create_app(config_class=Config):
     app.register_blueprint(reports_bp, url_prefix='/reports')
     app.register_blueprint(main_bp)
 
-    # Create database tables and bootstrap initial admin
+    # Create database tables and bootstrap initial users
     with app.app_context():
         db.create_all()
 
         from app.models import User
 
+        # --------------------------------
+        # Bootstrap Admin Account
+        # --------------------------------
         admin_username = os.environ.get('BOOTSTRAP_ADMIN_USERNAME')
         admin_password = os.environ.get('BOOTSTRAP_ADMIN_PASSWORD')
 
@@ -56,6 +59,27 @@ def create_app(config_class=Config):
                 admin.set_password(admin_password)
 
                 db.session.add(admin)
+                db.session.commit()
+
+        # --------------------------------
+        # Bootstrap Cashier Account
+        # --------------------------------
+        cashier_username = os.environ.get('BOOTSTRAP_CASHIER_USERNAME')
+        cashier_password = os.environ.get('BOOTSTRAP_CASHIER_PASSWORD')
+
+        if cashier_username and cashier_password:
+            existing_cashier = User.query.filter_by(
+                username=cashier_username
+            ).first()
+
+            if not existing_cashier:
+                cashier = User(
+                    username=cashier_username,
+                    role='cashier'
+                )
+                cashier.set_password(cashier_password)
+
+                db.session.add(cashier)
                 db.session.commit()
 
     return app
